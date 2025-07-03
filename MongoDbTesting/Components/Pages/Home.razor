@@ -1,0 +1,60 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using MongoDbTesting.Data
+@using MongoDbTesting.Services
+@using Radzen.Blazor
+
+@inject IOpovDbAccessService iOpovDbAccessService
+
+<PageTitle>Home</PageTitle>
+
+<h1>Hello, world!</h1>
+<br />
+<p>@message</p>
+<RadzenTextBox @bind-Value="@collectionName" Style="width: 25%" aria-label="Default TextBox" />
+<button class="btn btn-primary" @onclick="CreateOpovEventCollection">Create Opov Event</button>
+
+<RadzenTextBox @bind-Value="@contestName" Style="width: 25%" aria-label="Default TextBox" />
+<button class="btn btn-primary" @onclick="AddContestToCurrentCollection">Create Contest</button>
+
+@code {
+    string collectionName = "";
+    string contestName = "";
+
+    string message = "";
+
+    private void CreateOpovEventCollection()
+    {
+        if(string.IsNullOrEmpty(collectionName))
+        {
+            iOpovDbAccessService.CreateCollection("scoobyTestTwo");
+        }
+        else
+        {
+            iOpovDbAccessService.CreateCollection(collectionName);
+            iOpovDbAccessService.AddIndexOnNameField(collectionName);
+
+        }
+        message = $"Collection {collectionName} Created";
+        //StateHasChanged();
+    }
+
+    private void AddContestToCurrentCollection()
+    {
+        if (string.IsNullOrEmpty(collectionName))
+        {
+            message = "Error, OPOV Event name is empty";
+            return;
+        }
+        if (string.IsNullOrEmpty(contestName))
+        {
+            message = "Error, Contest name is empty";
+            return;
+        }
+        Contest contest = new Contest(){ Name = contestName};
+        message = iOpovDbAccessService.AddContest(contest, collectionName);
+
+    }
+
+    // TODO - make a display field and ensure there is no whitespace in Contest FORMAL name
+}
