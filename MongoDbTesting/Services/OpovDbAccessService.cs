@@ -35,8 +35,8 @@ namespace MongoDbTesting.Services
         public void AddIndexOnNameField(string collectionName)
         {
             IMongoCollection<Contest> Contests = iMongoDatabase!.GetCollection<Contest>(collectionName);
-
-            var indexModel = new CreateIndexModel<Contest>(Builders<Contest>.IndexKeys.Ascending(c => c.Name));
+            var options = new CreateIndexOptions { Unique = true };
+            var indexModel = new CreateIndexModel<Contest>(Builders<Contest>.IndexKeys.Ascending(c => c.Name), options);
 
             Contests.Indexes.CreateOne(indexModel);
         }
