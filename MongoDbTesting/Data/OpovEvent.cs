@@ -8,6 +8,6 @@ namespace MongoDbTesting.Data
         [BsonRepresentation(BsonType.ObjectId)]
         public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
         public required string Name { get; set; }
-        public List<Contest>? Contests { get; set; }
+        //public List<Contest>? Contests { get; set; }  // NO NO. The Collection will handle managing Documents added to it.
     }
 }

@@ -1,6 +1,21 @@
-﻿using Microsoft.AspNetCore.Mvc.RazorPages;
-using MongoDB.Driver;
+﻿using MongoDB.Driver;
 using MongoDbTesting.Data;
+
+// OpovEvent is a collection. It's type is 'collection'.
+//
+// Each OpovEvent Collection will reference the Contest Documents added to it.
+// The Contest Documents are not maintained as a "Collection" within a Collection. 
+// At least from the MongoDB perspective. 
+// Reference: https://www.mongodb.com/community/forums/t/nested-collections/202832
+//
+// However, when one adds an Index to a TYPE of DOCUMENT that will be referenced by
+// the collection, then those Documents within the collection will be indexed. 
+//
+// What confuses me about this model is this code:
+//	 IMongoCollection<Contest> Contests = iMongoDatabase!.GetCollection<Contest>(collectionName);
+//
+// The GetCollection call returns "An implementation of a collection."  
+// So the GetCollection() call kind of creates a pseudo-collection? Within the collection? 
 
 namespace MongoDbTesting.Services
 {
@@ -74,19 +89,28 @@ namespace MongoDbTesting.Services
                 //    message = $"{contest.Name} already exits!";
                 //}
 
-                return message;
+                return $"Contest {contest.Name} was inserted";
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
-                return "ERROR";
+                return $"Failed to add contest error: {ex.Message}";
             }
 
         }
 
-        public void CreateCollection(string collectionName)
+        public string CreateOpovEventCollection(string collectionName)
         {
-            iMongoDatabase!.CreateCollection(collectionName); // if collection exists then it is not created
+            IMongoCollection<Contest> checkIfCollectionAlreadyExists = iMongoDatabase.GetCollection<Contest>(collectionName);
+
+            long numDocs = checkIfCollectionAlreadyExists.CountDocuments(Builders<Contest>.Filter.Empty);
+
+            if (numDocs == 0)
+            {
+                iMongoDatabase!.CreateCollection(collectionName); // if collection already exists then it is not created
+                return $"Collection {collectionName} was created";
+            }
+            return $"Collection {collectionName} already exists";
         }
     }
 }
