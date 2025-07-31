@@ -2,58 +2,148 @@
 @rendermode InteractiveServer
 @using MongoDbTesting.Data
 @using MongoDbTesting.Services
+@using Radzen
 @using Radzen.Blazor
 
 @inject IOpovDbAccessService iOpovDbAccessService
 
 <PageTitle>Home</PageTitle>
 
-<h1>Testing a Unique Index with MongoDB .Net driver </h1>
-<br />
-<p>@message</p>
-<RadzenTextBox @bind-Value="@collectionName" Style="width: 25%" aria-label="Default TextBox" />
-<button class="btn btn-primary" @onclick="CreateOpovEventCollection">Create Opov Event</button>
+<h3>Testing MongoDB's .Net Driver </h3>
 
-<RadzenTextBox @bind-Value="@contestName" Style="width: 25%" aria-label="Default TextBox" />
-<button class="btn btn-primary" @onclick="AddContestToCurrentCollection">Create Contest</button>
+<br />
+<h4>List of Opov Events</h4>
+<ul style="max-height:100px; overflow-y:auto">
+    @foreach (var name in documentNames)
+    {
+        <li>@name</li>
+    }
+</ul>
+<br />
+
+<p>@message</p>
+<RadzenTextBox @bind-Value="@opovEventName" Style="width: 25%" aria-label="Default TextBox" />
+<button class="btn btn-primary" @onclick="CreateOpovEvent">Create Opov Event</button>
+
+<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" class="rz-p-2">
+    <RadzenCheckBox @bind-Value="@allowVirtualization" Name="allowVirtualization" />
+    <RadzenLabel Text="Allow virtualization" Component="allowVirtualization" />
+</RadzenStack>
+
+<RadzenDataList AllowVirtualization=@allowVirtualization Style="@(allowVirtualization ? "height:400px;overflow:auto;" : "")"
+                WrapItems="@(!allowVirtualization)" AllowPaging="@(!allowVirtualization)"
+                Data="@documentNames" TItem="string" PageSize="4" PagerHorizontalAlign="HorizontalAlign.Center" ShowPagingSummary="true">
+    <Template Context="eventOp">
+        <RadzenCard Variant="Variant.Outlined" class="rz-p-0" Style="width: 100%; overflow: hidden;">
+            <RadzenRow Gap="0">
+                <RadzenColumn Size="4" >
+                    <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" class="rz-color-on-secondary-lighter">@(eventOp)-AA</RadzenText>
+                </RadzenColumn>
+
+                <RadzenColumn Size="8" >
+                    <RadzenButton Text="Select-BB" Click=@(args => SelectOpovEvent(@eventOp)) />
+                </RadzenColumn>
+            </RadzenRow>
+        </RadzenCard>
+    </Template>
+</RadzenDataList>
+
+@if (selectedOpovEvent is not null)
+{
+    <h4>Selected Event: @selectedOpovEvent.EventName</h4>
+    <RadzenTextBox @bind-Value="@contestName" Style="width: 25%" aria-label="Default TextBox" />
+    <button class="btn btn-primary" @onclick="AddContestToSelectedOpovEvent">Create Contest</button>
+    <ul style="max-height:100px; overflow-y:auto">
+        @if(selectedOpovEvent.Contests != null)
+        {
+            foreach (var contest in selectedOpovEvent.Contests)
+            {
+                <li>@contest.Name</li>
+            }
+        }
+        else
+        {
+            <p>No Contests exist currently.</p>
+        }
+
+    </ul>
+    <br />
+}
+else
+{
+    <h4>Selected Event: None Selected</h4>
+}
 
 @code {
-    string collectionName = "";
+    string opovEventName = "";
     string contestName = "";
 
     string message = "";
 
-    private void CreateOpovEventCollection()
+    bool allowVirtualization;
+
+    List<string> documentNames = new();
+    List<OpovEvent> opovEvents = new();
+
+    OpovEvent? selectedOpovEvent = null;
+
+    protected override async Task OnInitializedAsync()
     {
-        if(string.IsNullOrEmpty(collectionName))
+        // collectionNames = await iOpovDbAccessService.ListCollectionNames();
+        RefreshList();
+    }
+
+    private void CreateOpovEvent()
+    {
+        if (!string.IsNullOrEmpty(opovEventName))
         {
-            iOpovDbAccessService.CreateOpovEventCollection("scoobyTestTwo");
+            var newEvent = new OpovEvent() { EventName = opovEventName };
+            message = iOpovDbAccessService.AddOpovEvent(newEvent, OpovDbAccessServiceConstants.OpovEventsCollectionName);
+            opovEventName = ""; // To clear out the text box?
         }
         else
         {
-            iOpovDbAccessService.CreateOpovEventCollection(collectionName);
-            iOpovDbAccessService.AddIndexOnNameField(collectionName);
-
+            message = "Name cannot be blank";
         }
-        message = $"Collection {collectionName} Created";
-        //StateHasChanged();
+        //iNavigationManager.Refresh();  // TODO is this what I want? Or do I just want to blank out the input text box? Did not work as expected.
+
+        //RefreshList();
     }
 
-    private void AddContestToCurrentCollection()
+    private void AddContestToSelectedOpovEvent()
     {
-        if (string.IsNullOrEmpty(collectionName))
-        {
-            message = "Error, OPOV Event name is empty";
-            return;
-        }
         if (string.IsNullOrEmpty(contestName))
         {
             message = "Error, Contest name is empty";
             return;
         }
         Contest contest = new Contest(){ Name = contestName};
-        message = iOpovDbAccessService.AddContest(contest, collectionName);
-
+        message = iOpovDbAccessService.AddContest(contest, selectedOpovEvent!.EventName); // At this point opovEventName is reset to "", but selectedOpovEvent should be non-null
+        // StateHasChanged(); // This did not refresh the Contest list with newly added contest
+        SelectOpovEvent(selectedOpovEvent!.EventName); // 
     }
 
+    private void RefreshList()
+    {
+        documentNames = iOpovDbAccessService.GetDocumentNames(OpovDbAccessServiceConstants.OpovEventsCollectionName);
+    }
+
+    private void SelectOpovEvent(string eventName)
+    {
+        selectedOpovEvent = iOpovDbAccessService.GetOpovEvent(eventName); /// hmmm beginning to think this method should be private to the service... TODO - rethink
+
+        //var xx = iNavigationManager.GetUriWithQueryParameter("skippy", "scoobVal");
+
+        //  string nextStopUriAsString = iNavigationManager.ToAbsoluteUri("OpovEventEditPanel").ToString();
+      
+
+        // var queryParams = new Dictionary<string, string>
+        // {
+        //     { "OpovEventName", eventName }
+        // };
+
+     //   nextStopUriAsString = QueryHelpers.AddQueryString(nextStopUriAsString, queryParams);
+
+     //   iNavigationManager.NavigateTo(nextStopUriAsString);
+    }
 }

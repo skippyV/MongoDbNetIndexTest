@@ -1,6 +1,7 @@
 using MongoDbTesting.Components;
 using MongoDbTesting.Data;
 using MongoDbTesting.Services;
+using Radzen;
 
 namespace MongoDbTesting
 {
@@ -13,6 +14,8 @@ namespace MongoDbTesting
             // Add services to the container.
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
+
+            builder.Services.AddRadzenComponents();
 
             MongoDbConfig? mongoDbConfig = builder.Configuration.GetSection(nameof(MongoDbConfig)).Get<MongoDbConfig>();
             if (mongoDbConfig == null)

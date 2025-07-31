@@ -13,13 +13,13 @@ namespace MongoDbTesting.Data
         public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
 
         private readonly string name;
-        public required string  Name 
-        { 
-            get => name; 
+        public required string Name
+        {
+            get => name;
             init
             {
                 name = StringStuff.RemoveWhitespacesUsingStringBuilder(value);
-            }  
+            }
         }
         public string Title { get; set; } = "";
         public List<string>? ContestAdmins { get; set; }
@@ -28,5 +28,4 @@ namespace MongoDbTesting.Data
 
 
     }
-    
 }
