@@ -6,6 +6,7 @@
 @using Radzen.Blazor
 
 @inject IOpovDbAccessService iOpovDbAccessService
+@inject IJSRuntime iJS
 
 <PageTitle>Home</PageTitle>
 
@@ -36,12 +37,16 @@
     <Template Context="eventOp">
         <RadzenCard Variant="Variant.Outlined" class="rz-p-0" Style="width: 100%; overflow: hidden;">
             <RadzenRow Gap="0">
-                <RadzenColumn Size="4" >
+                <RadzenColumn Size="2" >
                     <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" class="rz-color-on-secondary-lighter">@(eventOp)-AA</RadzenText>
                 </RadzenColumn>
 
-                <RadzenColumn Size="8" >
-                    <RadzenButton Text="Select-BB" Click=@(args => SelectOpovEvent(@eventOp)) />
+                <RadzenColumn Size="2" >
+                    <RadzenButton Text="Select" Click=@(args => SelectOpovEvent(@eventOp)) />
+                </RadzenColumn>
+
+                <RadzenColumn Size="8">
+                    <RadzenButton Text="Dummy Button"  />
                 </RadzenColumn>
             </RadzenRow>
         </RadzenCard>
@@ -56,10 +61,18 @@
     <ul style="max-height:100px; overflow-y:auto">
         @if(selectedOpovEvent.Contests != null)
         {
-            foreach (var contest in selectedOpovEvent.Contests)
-            {
-                <li>@contest.Name</li>
-            }
+            <RadzenDataList Data="@selectedOpovEvent.Contests" TItem="Contest">
+                <Template Context="contest">
+                    <RadzenRow Gap="0">
+                        <RadzenColumn Size="4" >
+                            <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" class="rz-color-on-secondary-lighter">@(contest.Name)</RadzenText>
+                        </RadzenColumn>
+                        <RadzenColumn Size="2">
+                            <RadzenButton Text="Select" Click=@(args => SelectContest(@contest.Name)) />
+                        </RadzenColumn>
+                    </RadzenRow>
+                </Template>
+            </RadzenDataList>
         }
         else
         {
@@ -89,11 +102,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // collectionNames = await iOpovDbAccessService.ListCollectionNames();
-        RefreshList();
+        // collectionNames = await iOpovDbAccessService.ListCollectionNames(); 
+
+        documentNames = iOpovDbAccessService.GetDocumentNames(OpovDbAccessServiceConstants.OpovEventsCollectionName);    
     }
 
-    private void CreateOpovEvent()
+    private void CreateOpovEvent() // TODO - List of OpovEvents is not updated upon new event creation !!
     {
         if (!string.IsNullOrEmpty(opovEventName))
         {
@@ -119,13 +133,23 @@ else
         }
         Contest contest = new Contest(){ Name = contestName};
         message = iOpovDbAccessService.AddContest(contest, selectedOpovEvent!.EventName); // At this point opovEventName is reset to "", but selectedOpovEvent should be non-null
+
         // StateHasChanged(); // This did not refresh the Contest list with newly added contest
-        SelectOpovEvent(selectedOpovEvent!.EventName); // 
+        SelectOpovEvent(selectedOpovEvent!.EventName); // However, this does update the list. Pretty crude but works.
+        contestName = "";
+        ScrollToBottomJS();
+        // Wanted a ScrollToBottom method but only saw JS stuff for going to the top.
+        // 
+        // So tried to get the scroll-to-top feature working as per:
+        //     https://supportcenter.devexpress.com/ticket/details/t1062210/button-for-blazor-how-to-implement-a-scroll-to-top-button
+        // And called it ScrollToBottom, even though it is code for scrolling to top.
+        //
+        // But couldn't get it to scroll to top as expected.
     }
 
-    private void RefreshList()
+    private void ScrollToBottomJS()
     {
-        documentNames = iOpovDbAccessService.GetDocumentNames(OpovDbAccessServiceConstants.OpovEventsCollectionName);
+        iJS.InvokeVoidAsync("backToTop");
     }
 
     private void SelectOpovEvent(string eventName)
@@ -135,15 +159,20 @@ else
         //var xx = iNavigationManager.GetUriWithQueryParameter("skippy", "scoobVal");
 
         //  string nextStopUriAsString = iNavigationManager.ToAbsoluteUri("OpovEventEditPanel").ToString();
-      
+
 
         // var queryParams = new Dictionary<string, string>
         // {
         //     { "OpovEventName", eventName }
         // };
 
-     //   nextStopUriAsString = QueryHelpers.AddQueryString(nextStopUriAsString, queryParams);
+        //   nextStopUriAsString = QueryHelpers.AddQueryString(nextStopUriAsString, queryParams);
 
-     //   iNavigationManager.NavigateTo(nextStopUriAsString);
+        //   iNavigationManager.NavigateTo(nextStopUriAsString);
+    }
+
+    private void SelectContest(string contestName)
+    {
+        var xx = contestName;
     }
 }
